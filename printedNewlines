@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# Check if requesting help
+if [ $# -ge 1 ] && ( echo "$1" | egrep '^--*h(elp)?$' &> "/dev/null" )
+then
+	echo "This program replaces new lines with a '\\n'"
+	echo "Usage: ./printedNewlines file_in file_out"
+	echo "  OR   ./printedNewlines file_in | STDOUT"
+	echo "  OR   STDIN | ./printedNewlines | STDOUT"
+	echo "  OR   STDIN | ./printedNewlines file_out"
+	exit
+fi
+
+# Test if only one argumetn is given and the first argument is not a file
+if [ $# -eq 1 ] && [ ! -f "$1" ]
+then
+	# grab the first byte from STDIN and test if it exists
+	first_byte=$(dd bs=1 count=1 2>/dev/null | od -t o1 -A n | tr -dc 0-9)
+	input_file_exists=0
+fi
+
+# Put the input in a temporty file
+echo -n "" > "/tmp/printedNewlines_tmp"
+if [ -z "$first_byte" ]
+then
+	# if the input is empty
+    # check that there is an input file
+	if [ $# -ge 1 ] && [ -f "$1" ]
+	then
+		cat "$1" > "/tmp/printedNewlines_tmp"	
+		input_file_exists=1
+	else
+		echo "Error: input file does not exist - try"
+		echo "	./printedNewlines --help"	
+		exit
+	fi
+else
+  {
+    printf "\\$first_byte"
+    cat
+  } > "/tmp/printedNewlines_tmp"
+fi
+
+if [ $input_file_exists -eq 1 ]
+then
+	# if there are two file arguments
+	if [ $# -ge 2 ]
+	then
+		# Write to second argument as output file
+		cat "/tmp/printedNewlines_tmp" | sed 's/\(.*\)/\1\\n/g' | tr -d '\n' > "$2"
+	else
+		# Write to STDOUT if not second argument as output file
+		cat "/tmp/printedNewlines_tmp" | sed 's/\(.*\)/\1\\n/g' | tr -d '\n'
+	fi
+else
+	# input was STDIN
+	if [ $# -ge 1 ]
+	then
+		# Write to first argument as output file
+		cat "/tmp/printedNewlines_tmp" | sed 's/\(.*\)/\1\\n/g' | tr -d '\n' > "$1"
+	else
+		cat "/tmp/printedNewlines_tmp" | sed 's/\(.*\)/\1\\n/g' | tr -d '\n'
+	fi
+fi
