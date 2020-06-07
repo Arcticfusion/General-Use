@@ -1,0 +1,20 @@
+#!/bin/bash
+
+while read line
+do
+		output=''
+		for (( i=0; i<${#line}; i++ ))
+		do
+				c="${line:$i:1}"
+				if echo $c | egrep '^[0-9]$' > /dev/null
+				then
+					let "c = $c + 30"
+					output="${output}%${c}"
+				else
+					output="${output}$c"
+				fi
+		done	
+		echo "$output"
+done < "${1:-/dev/stdin}"
+
+
